@@ -1,0 +1,19 @@
+{
+  "name": "node-process",
+  "version": "1.0.0",
+  "main": "app.js",
+  "license": "MIT",
+  "scripts": {
+    "app": "node app.js",
+    "perf": "rm -rf *-v8.log && node --prof app.js",
+    "flame": "node --prof-process --preprocess -j isolate*.log | flamebearer"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "ps-tree": "^1.2.0"
+  },
+  "devDependencies": {
+    "0x": "^4.9.1",
+    "flamebearer": "^1.1.3"
+  }
+}
