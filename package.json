@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "app": "node app.js",
+    "inspect":"node --inspect app.js",
     "perf": "rm -rf *-v8.log && node --prof app.js",
     "flame": "node --prof-process --preprocess -j isolate*.log | flamebearer"
   },
