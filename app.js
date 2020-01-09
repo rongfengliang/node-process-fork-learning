@@ -1,29 +1,42 @@
-const {fork} = require('child_process')
+const { fork } = require('child_process')
 const express = require("express")
 const util = require("./utils")
-const {child_process_status_all,child_process_status_pending,child_process_status_ok}  = require("./taskstatus")
-const {child_process_status_all_counter,child_process_status_pending_gauge,child_process_status_ok_counter,initMetrics,initGcStats,process_ok_clean_timer__status,up}  = require("./metrics")
+const { child_process_status_all, child_process_status_pending, child_process_status_ok } = require("./taskstatus")
+const { child_process_status_all_counter, child_process_status_pending_gauge, child_process_status_ok_counter, initMetrics, initGcStats, process_ok_clean_timer__status, up } = require("./metrics")
 const app = express();
 const main_process_id = process.pid;
 let interval = false;
-//  metrics route
+
+/**
+ * metrics route register
+ */
 app.get('/metrics', (req, res) => {
-  initMetrics(req,res);
+  initMetrics(req, res);
 })
-app.get("/disable_timer",(req,res)=>{
-   if(interval){
-    interval=false;
-   }
-   process_ok_clean_timer__status.set(0)
-   res.send({timer_statuss:false})
+/**
+ * disable process clean timer 
+ */
+app.get("/disable_timer", (req, res) => {
+  if (interval) {
+    interval = false;
+  }
+  process_ok_clean_timer__status.set(0)
+  res.send({ timer_statuss: false })
 })
-app.get("/enable_timer",(req,res)=>{
-  if(interval==false){
-   interval=true;
+/**
+ * enable process clean timer 
+ */
+app.get("/enable_timer", (req, res) => {
+  if (interval == false) {
+    interval = true;
   }
   process_ok_clean_timer__status.set(1)
-  res.send({timer_statuss:true})
+  res.send({ timer_statuss: true })
 })
+
+/**
+ * for create process workers
+ */
 app.get('/endpoint', (req, res) => {
   // fork another process
   const myprocess = fork('./send_mail.js');
@@ -54,11 +67,14 @@ app.get('/endpoint', (req, res) => {
   });
   return res.json({ status: true, sent: true });
 });
-// for stop fork  child process 
+
+/**
+ * call api for stop processed workers
+ */
 app.get("/stop", (req, res) => {
-  util.stopProcess(main_process_id,(err,data)=>{
-    if(err==null){
-      res.send({timer_clean_status:"ok"})
+  util.stopProcess(main_process_id, (err, data) => {
+    if (err == null) {
+      res.send({ timer_clean_status: "ok" })
     }
   })
 })
@@ -66,20 +82,21 @@ app.get("/stop", (req, res) => {
 // init gc metrics 
 initGcStats()
 // clean ok process timer
-setInterval(function(){
-  if(interval){
-    util.stopProcess(main_process_id,(err,data)=>{
-      if(err==null){
-        console.log({timer_clean_status:"ok"})
-      }else{
+setInterval(function () {
+  if (interval) {
+    util.stopProcess(main_process_id, (err, data) => {
+      if (err == null) {
+        console.log({ timer_clean_status: "ok" })
+      } else {
         process_ok_clean_timer__status.set(0)
       }
     })
   }
-},10000)
+}, 10000)
+// set metric status to up 
 up.set(1)
 app.listen(8080, "0.0.0.0", () => {
   console.log(`go to http://localhost:8080/ to generate traffic`)
-}).on("error",()=>{
+}).on("error", () => {
   up.set(0)
 })
