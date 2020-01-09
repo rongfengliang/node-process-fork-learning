@@ -13,7 +13,8 @@
     "express": "^4.17.1",
     "prom-client": "^11.5.3",
     "prometheus-gc-stats": "^0.6.2",
-    "ps-tree": "^1.2.0"
+    "ps-tree": "^1.2.0",
+    "uuid": "^3.3.3"
   },
   "devDependencies": {
     "0x": "^4.9.1",

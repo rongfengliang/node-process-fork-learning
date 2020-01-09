@@ -6,7 +6,8 @@ async function sendMultipleMails(mails) {
  }
  // receive message from master process
  process.on('message', async (message) => {
-   const numberOfMailsSend = await sendMultipleMails(message.mails); 
+   console.log("get messageId",message)
+   const numberOfMailsSend = await sendMultipleMails(message.mailsid); 
    setTimeout(()=>{
     process.send({ counter: numberOfMailsSend });
    },Number.parseInt(Math.random()*10000))

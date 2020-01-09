@@ -1,6 +1,7 @@
 const { fork } = require('child_process')
 const express = require("express")
 const util = require("./utils")
+const uuid = require("uuid/v4")
 const { child_process_status_all, child_process_status_pending, child_process_status_ok } = require("./taskstatus")
 const { child_process_status_all_counter, child_process_status_pending_gauge, child_process_status_ok_counter, initMetrics, initGcStats, process_ok_clean_timer__status, up } = require("./metrics")
 const app = express();
@@ -49,7 +50,7 @@ app.get('/endpoint', (req, res) => {
   child_process_status_all_counter.inc(1)
   child_process_status_pending_gauge.inc(1)
   console.log(`fork process pid:${myprocess.pid}`)
-  const mails = "dddd";
+  const mails = uuid();
   // send list of e-mails to forked process
   myprocess.send({ mails });
   // listen for messages from forked process
