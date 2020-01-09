@@ -33,5 +33,8 @@ module.exports = {
       initMetrics:function(req,res){
         res.set('Content-Type', Prometheus.register.contentType)
         res.end(Prometheus.register.metrics())
+      },
+      defaultMetrics:function(){
+        Prometheus.collectDefaultMetrics()
       }
 }

@@ -3,7 +3,7 @@ const express = require("express")
 const util = require("./utils")
 const uuid = require("uuid/v4")
 const { child_process_status_all, child_process_status_pending, child_process_status_ok } = require("./taskstatus")
-const { child_process_status_all_counter, child_process_status_pending_gauge, child_process_status_ok_counter, initMetrics, initGcStats, process_ok_clean_timer__status, up } = require("./metrics")
+const { child_process_status_all_counter, child_process_status_pending_gauge, child_process_status_ok_counter, initMetrics, initGcStats, process_ok_clean_timer__status, up,defaultMetrics } = require("./metrics")
 const app = express();
 const main_process_id = process.pid;
 let interval = false;
@@ -96,6 +96,8 @@ setInterval(function () {
 }, 10000)
 // set metric status to up 
 up.set(1)
+// register default metrics
+defaultMetrics()
 app.listen(8080, "0.0.0.0", () => {
   console.log(`go to http://localhost:8080/ to generate traffic`)
 }).on("error", () => {
