@@ -1,14 +1,30 @@
-const { fork, spawn } = require('child_process');
+const {fork} = require('child_process')
 const express = require("express")
-const psTree = require("ps-tree")
-app = express();
-var main_process_id = process.pid;
-console.log(`main process id ${main_process_id}`)
-var child_process_status = {};
-var child_process_status_all = {};
-var child_process_status_pending = {};
-var child_process_status_ok = {};
-app.get('/endpoint', (request, response) => {
+const util = require("./utils")
+const {child_process_status_all,child_process_status_pending,child_process_status_ok}  = require("./taskstatus")
+const {child_process_status_all_counter,child_process_status_pending_gauge,child_process_status_ok_counter,initMetrics,initGcStats,process_ok_clean_timer__status,up}  = require("./metrics")
+const app = express();
+const main_process_id = process.pid;
+let interval = false;
+//  metrics route
+app.get('/metrics', (req, res) => {
+  initMetrics(req,res);
+})
+app.get("/disable_timer",(req,res)=>{
+   if(interval){
+    interval=false;
+   }
+   process_ok_clean_timer__status.set(0)
+   res.send({timer_statuss:false})
+})
+app.get("/enable_timer",(req,res)=>{
+  if(interval==false){
+   interval=true;
+  }
+  process_ok_clean_timer__status.set(1)
+  res.send({timer_statuss:true})
+})
+app.get('/endpoint', (req, res) => {
   // fork another process
   const myprocess = fork('./send_mail.js');
   child_process_status_pending[myprocess.pid] = {
@@ -17,6 +33,8 @@ app.get('/endpoint', (request, response) => {
   child_process_status_all[myprocess.pid] = {
     status: "pending"
   }
+  child_process_status_all_counter.inc(1)
+  child_process_status_pending_gauge.inc(1)
   console.log(`fork process pid:${myprocess.pid}`)
   const mails = "dddd";
   // send list of e-mails to forked process
@@ -27,52 +45,41 @@ app.get('/endpoint', (request, response) => {
     child_process_status_ok[myprocess.pid] = {
       status: "ok"
     }
+    child_process_status_ok_counter.inc(1)
+    child_process_status_pending_gauge.dec(1)
     child_process_status_all[myprocess.pid] = {
       status: "ok"
     }
     delete child_process_status_pending[myprocess.pid]
   });
-  return response.json({ status: true, sent: true });
+  return res.json({ status: true, sent: true });
 });
-setInterval(() => {
-  psTree(main_process_id, function (err, children) {
-    console.log(`all:${JSON.stringify(child_process_status_all)}`)
-    console.log(`ok: ${JSON.stringify(child_process_status_ok)}`)
-    console.log(`pending:${JSON.stringify(child_process_status_pending)}`)
-    let pids = [];
-    for (const key in child_process_status_ok) {
-      if (child_process_status_ok.hasOwnProperty(key)) {
-        pids.push(key)
-        delete child_process_status_ok[key]
-      }
-    }
-    let info = children.filter(item => item.COMM == "ps" || item.COMMAND == "ps").map(function (p) { return p.PID })
-    pids.push(...info)
-    console.log(`stop  child process ids: ${JSON.stringify(pids)}`)
-    spawn('kill', ['-9'].concat(pids));
-    console.log({ stop: true });
-  })
-},2000)
 // for stop fork  child process 
-app.get("/stop", (request, response) => {
-  psTree(main_process_id, function (err, children) {
-    console.log(`all:${JSON.stringify(child_process_status_all)}`)
-    console.log(`ok: ${JSON.stringify(child_process_status_ok)}`)
-    console.log(`pending:${JSON.stringify(child_process_status_pending)}`)
-    let pids = [];
-    for (const key in child_process_status_ok) {
-      if (child_process_status_ok.hasOwnProperty(key)) {
-        pids.push(key)
-        delete child_process_status_ok[key]
-      }
+app.get("/stop", (req, res) => {
+  util.stopProcess(main_process_id,(err,data)=>{
+    if(err==null){
+      res.send({timer_clean_status:"ok"})
     }
-    let info = children.filter(item => item.COMM == "ps" || item.COMMAND == "ps").map(function (p) { return p.PID })
-    pids.push(...info)
-    console.log(`stop  child process ids: ${JSON.stringify(pids)}`)
-    spawn('kill', ['-9'].concat(pids));
-    return response.json({ stop: true });
   })
 })
+
+// init gc metrics 
+initGcStats()
+// clean ok process timer
+setInterval(function(){
+  if(interval){
+    util.stopProcess(main_process_id,(err,data)=>{
+      if(err==null){
+        console.log({timer_clean_status:"ok"})
+      }else{
+        process_ok_clean_timer__status.set(0)
+      }
+    })
+  }
+},10000)
+up.set(1)
 app.listen(8080, "0.0.0.0", () => {
   console.log(`go to http://localhost:8080/ to generate traffic`)
-});
+}).on("error",()=>{
+  up.set(0)
+})

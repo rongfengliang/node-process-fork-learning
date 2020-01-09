@@ -5,12 +5,14 @@
   "license": "MIT",
   "scripts": {
     "app": "node app.js",
-    "inspect":"node --inspect app.js",
+    "inspect": "node --inspect app.js",
     "perf": "rm -rf *-v8.log && node --prof app.js",
     "flame": "node --prof-process --preprocess -j isolate*.log | flamebearer"
   },
   "dependencies": {
     "express": "^4.17.1",
+    "prom-client": "^11.5.3",
+    "prometheus-gc-stats": "^0.6.2",
     "ps-tree": "^1.2.0"
   },
   "devDependencies": {
